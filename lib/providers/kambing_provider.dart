@@ -144,10 +144,10 @@ class KambingProvider extends ChangeNotifier {
     loadAll(silent: true);
   }
 
-  void setFilter({String? status, String? kondisi}) {
+  void setFilter({String? status, String? kondisi, bool silent = false}) {
     _filterStatus = status;
     _filterKondisi = kondisi;
-    loadAll();
+    loadAll(silent: silent);
   }
 
   void clearFilters() {

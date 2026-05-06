@@ -31,4 +31,18 @@ class UserService {
   Future<void> delete(int id) async {
     await _api.delete(ApiConstants.userDetail(id));
   }
+
+  /// Simpan Gemini API Key ke server (tabel m_user.gemini_api_key)
+  Future<void> saveGeminiKey(int userId, String apiKey) async {
+    await _api.put(ApiConstants.userGeminiKey(userId), data: {'api_key': apiKey});
+  }
+
+  /// Ambil Gemini API Key dari server
+  Future<String?> getGeminiKey(int userId) async {
+    final data = await _api.get(ApiConstants.userGeminiKey(userId));
+    if (data is Map) {
+      return data['gemini_api_key']?.toString();
+    }
+    return null;
+  }
 }

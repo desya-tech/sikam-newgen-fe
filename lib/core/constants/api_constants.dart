@@ -1,7 +1,7 @@
 class ApiConstants {
   // Untuk Android emulator gunakan 10.0.2.2
   // Untuk device fisik gunakan IP LAN komputer: 192.168.x.x
-  static const String baseUrl = 'http://10.11.88.102:3000';
+  static const String baseUrl = 'http://192.168.1.91:3000';
 
   // Auth
   static const String login = '/auth/login';
@@ -24,6 +24,8 @@ class ApiConstants {
   // User
   static const String user = '/user';
   static String userDetail(int id) => '/user/$id';
+  static String userGeminiKey(int id) => '/user/$id/gemini-key';
+  static String userAvatar(int id) => '/user/$id/avatar';
 
   // Role
   static const String role = '/role';

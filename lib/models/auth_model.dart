@@ -6,6 +6,7 @@ class AuthModel {
   final String email;
   final String? noHp;
   final String? fotoProfil;
+  final String? geminiApiKey;
   final RoleModel role;
   final String token;
 
@@ -15,31 +16,45 @@ class AuthModel {
     required this.email,
     this.noHp,
     this.fotoProfil,
+    this.geminiApiKey,
     required this.role,
     required this.token,
   });
 
   factory AuthModel.fromJson(Map<String, dynamic> json) => AuthModel(
-    userId:     json['user_id'] ?? 0,
-    username:   json['username'] ?? '',
-    email:      json['email'] ?? '',
-    noHp:       json['no_hp'],
-    fotoProfil: json['foto_profil'],
-    role:       RoleModel.fromJson(json['role'] ?? {}),
-    token:      json['token'] ?? '',
+    userId:       json['user_id'] ?? 0,
+    username:     json['username'] ?? '',
+    email:        json['email'] ?? '',
+    noHp:         json['no_hp'],
+    fotoProfil:   json['foto_profil'],
+    geminiApiKey: json['gemini_api_key'],
+    role:         RoleModel.fromJson(json['role'] ?? {}),
+    token:        json['token'] ?? '',
   );
 
   String toJsonString() => jsonEncode(toJson());
 
   Map<String, dynamic> toJson() => {
-    'user_id':    userId,
-    'username':   username,
-    'email':      email,
-    'no_hp':      noHp,
-    'foto_profil': fotoProfil,
-    'role':       role.toJson(),
-    'token':      token,
+    'user_id':        userId,
+    'username':       username,
+    'email':          email,
+    'no_hp':          noHp,
+    'foto_profil':    fotoProfil,
+    'gemini_api_key': geminiApiKey,
+    'role':           role.toJson(),
+    'token':          token,
   };
+
+  AuthModel copyWith({String? geminiApiKey}) => AuthModel(
+    userId:       userId,
+    username:     username,
+    email:        email,
+    noHp:         noHp,
+    fotoProfil:   fotoProfil,
+    geminiApiKey: geminiApiKey ?? this.geminiApiKey,
+    role:         role,
+    token:        token,
+  );
 
   static AuthModel? fromJsonString(String? jsonString) {
     if (jsonString == null) return null;

@@ -1,18 +1,16 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/kambing_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/monitoring_provider.dart';
 import '../../widgets/common/app_widgets.dart';
 import '../main_shell.dart';
@@ -133,7 +131,7 @@ class _MonitoringScreenState extends State<MonitoringScreen>
   }
 }
 
-// ─── Tab 1: Statistik ────────────────────────────────────────────────────────
+// â”€â”€â”€ Tab 1: Statistik â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _StatistikTab extends StatelessWidget {
   final MonitoringProvider m;
@@ -325,7 +323,7 @@ class _StatistikTab extends StatelessWidget {
   }
 }
 
-// ─── Tab 2 & 3: Kambing List ─────────────────────────────────────────────────
+// â”€â”€â”€ Tab 2 & 3: Kambing List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _KambingListTab extends StatelessWidget {
   final List<KambingModel> items;
@@ -337,8 +335,8 @@ class _KambingListTab extends StatelessWidget {
     if (items.isEmpty) {
       return EmptyState(
         message: type == 'sakit'
-            ? 'Tidak ada kambing yang sakit 🎉'
-            : 'Semua kambing terupdate 🎉',
+            ? 'Tidak ada kambing yang sakit ðŸŽ‰'
+            : 'Semua kambing terupdate ðŸŽ‰',
         sub: type == 'sakit'
             ? 'Semua kambing dalam kondisi baik'
             : 'Tidak ada yang perlu perhatian khusus',
@@ -396,7 +394,7 @@ class _KambingListTab extends StatelessWidget {
                           Text(k.namaKambing,
                               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: -0.3)),
                           const SizedBox(height: 4),
-                          Text('${k.jenisKambing} • ${k.kelamin}',
+                          Text('${k.jenisKambing} â€¢ ${k.kelamin}',
                               style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 6),
                           Row(
@@ -434,7 +432,7 @@ class _KambingListTab extends StatelessWidget {
   }
 }
 
-// ─── Shared Widgets ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Shared Widgets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _StatCard extends StatelessWidget {
   final String label;
@@ -537,7 +535,7 @@ class _Legend extends StatelessWidget {
   }
 }
 
-// ─── AI Tab ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ AI Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _AiTab extends StatefulWidget {
   const _AiTab();
@@ -551,68 +549,115 @@ class _AiTabState extends State<_AiTab> {
   bool _isLoading = false;
   String? _error;
   String? _geminiResult;
-  final TextEditingController _apiKeyController = TextEditingController();
 
   final ImagePicker _picker = ImagePicker();
   final Dio _dio = Dio();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadApiKey();
-  }
-
-  Future<void> _loadApiKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedKey = prefs.getString('gemini_api_key');
-    if (savedKey != null && savedKey.isNotEmpty) {
-      _apiKeyController.text = savedKey;
+  // Cek apakah ada key â€” tampilkan dialog jika belum
+  void _checkKeyOrProceed(VoidCallback onKeyAvailable) {
+    final key = context.read<AuthProvider>().geminiApiKey ?? '';
+    if (key.isEmpty) {
+      _showNoKeyDialog();
+    } else {
+      onKeyAvailable();
     }
   }
 
-  Future<void> _saveApiKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('gemini_api_key', _apiKeyController.text.trim());
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('API Key berhasil disimpan ke penyimpanan lokal perangkat!')),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _apiKeyController.dispose();
-    super.dispose();
+  void _showNoKeyDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.auto_awesome, color: Color(0xFF4285F4)),
+            SizedBox(width: 10),
+            Text('Gemini API Key Belum Ada'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Untuk menggunakan fitur Analisis AI, kamu perlu menambahkan Gemini API Key terlebih dahulu.',
+              style: TextStyle(fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4285F4).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Cara menambahkan:',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  SizedBox(height: 8),
+                  _InlineStep(n: '1', text: 'Buka menu Profil (ikon pojok kanan atas)'),
+                  SizedBox(height: 4),
+                  _InlineStep(n: '2', text: 'Temukan bagian "Gemini AI Key"'),
+                  SizedBox(height: 4),
+                  _InlineStep(n: '3', text: 'Masukkan key dari aistudio.google.com'),
+                  SizedBox(height: 4),
+                  _InlineStep(n: '4', text: 'Tekan Simpan, lalu kembali ke sini'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(_),
+            child: const Text('Nanti'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(_);
+              context.go('/profile');
+            },
+            icon: const Icon(Icons.person_outline, size: 18),
+            label: const Text('Buka Profil'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF4285F4),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    try {
-      final pickedFile = await _picker.pickImage(
-        source: source,
-        maxWidth: 800,
-        imageQuality: 80,
-      );
-      if (pickedFile != null) {
-        setState(() {
-          _image = File(pickedFile.path);
-          _geminiResult = null;
-          _error = null;
-        });
+    _checkKeyOrProceed(() async {
+      try {
+        final pickedFile = await _picker.pickImage(
+          source: source,
+          maxWidth: 800,
+          imageQuality: 80,
+        );
+        if (pickedFile != null) {
+          setState(() {
+            _image = File(pickedFile.path);
+            _geminiResult = null;
+            _error = null;
+          });
+        }
+      } catch (e) {
+        setState(() => _error = 'Gagal mengambil gambar: $e');
       }
-    } catch (e) {
-      setState(() => _error = 'Gagal mengambil gambar: $e');
-    }
+    });
   }
 
   Future<void> _analyzeImage() async {
-    final apiKey = _apiKeyController.text.trim();
+    final apiKey = context.read<AuthProvider>().geminiApiKey ?? '';
     if (apiKey.isEmpty) {
-      setState(() => _error = 'Masukkan API Key Gemini terlebih dahulu.');
+      _showNoKeyDialog();
       return;
     }
     if (_image == null) return;
-    
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -622,15 +667,19 @@ class _AiTabState extends State<_AiTab> {
     try {
       final bytes = await _image!.readAsBytes();
       final base64Image = base64Encode(bytes);
-      
-      final url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=$apiKey';
+
+      final url =
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey';
       final res = await _dio.post(
         url,
         data: {
           "contents": [
             {
               "parts": [
-                {"text": "Analisis gambar kambing ini. Sebutkan kemungkinan jenis/ras kambingnya, perkiraan umur jika bisa, dan apakah terlihat sehat atau sakit secara fisik. Berikan jawaban yang deskriptif, terstruktur, dan informatif dalam bahasa Indonesia."},
+                {
+                  "text":
+                      "Analisis gambar kambing ini. Sebutkan kemungkinan jenis/ras kambingnya, perkiraan umur jika bisa, dan apakah terlihat sehat atau sakit secara fisik. Berikan jawaban yang deskriptif, terstruktur, dan informatif dalam bahasa Indonesia."
+                },
                 {
                   "inline_data": {
                     "mime_type": "image/jpeg",
@@ -644,7 +693,7 @@ class _AiTabState extends State<_AiTab> {
         options: Options(
           headers: {'Content-Type': 'application/json'},
           sendTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 60),
         ),
       );
 
@@ -670,10 +719,11 @@ class _AiTabState extends State<_AiTab> {
       }
     } on DioException catch (e) {
       String msg = 'Gagal terhubung ke AI: ${e.message}';
-      if (e.response?.statusCode == 400) {
-        msg = 'API Key tidak valid atau permintaan ditolak.';
-      } else if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
-        msg = 'Koneksi ke server AI terputus/timeout.';
+      if (e.response?.statusCode == 400 || e.response?.statusCode == 403) {
+        msg = 'API Key tidak valid atau tidak punya akses. Periksa key di menu Profil.';
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        msg = 'Koneksi ke server AI timeout. Coba lagi.';
       }
       setState(() {
         _error = msg;
@@ -689,12 +739,16 @@ class _AiTabState extends State<_AiTab> {
 
   @override
   Widget build(BuildContext context) {
+    final hasKey =
+        (context.watch<AuthProvider>().geminiApiKey ?? '').isNotEmpty;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // â”€â”€ Info Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -707,73 +761,75 @@ class _AiTabState extends State<_AiTab> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Analisis foto kambing menggunakan Google Gemini AI. Dapatkan informasi mendalam tentang kemungkinan jenis kambing dan kondisi fisiknya.',
+                    'Analisis foto kambing menggunakan Google Gemini AI. '
+                    'Dapatkan informasi mendalam tentang jenis kambing dan kondisi fisiknya.',
                     style: TextStyle(fontSize: 13, color: AppColors.primaryDark),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // Input API Key
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.divider),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _apiKeyController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Gemini API Key',
-                          hintText: 'Masukkan API Key',
-                          prefixIcon: Icon(Icons.key, size: 20),
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
+          // â”€â”€ Status API Key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          GestureDetector(
+            onTap: () => context.go('/profile'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: hasKey
+                    ? AppColors.sehat.withOpacity(0.08)
+                    : AppColors.warning.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: hasKey
+                      ? AppColors.sehat.withOpacity(0.3)
+                      : AppColors.warning.withOpacity(0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    hasKey
+                        ? Icons.check_circle_outline
+                        : Icons.warning_amber_outlined,
+                    color: hasKey ? AppColors.sehat : AppColors.warning,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      hasKey
+                          ? 'Gemini API Key sudah dikonfigurasi'
+                          : 'Gemini API Key belum dikonfigurasi â€” ketuk untuk setup',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: hasKey ? AppColors.sehat : AppColors.warning,
                       ),
                     ),
-                    TextButton.icon(
-                      onPressed: _saveApiKey,
-                      icon: const Icon(Icons.save, size: 18),
-                      label: const Text('Simpan'),
-                    ),
-                  ],
-                ),
-                const Divider(height: 1),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.lock_outline, size: 14, color: AppColors.textSecondary),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Aman: API Key hanya disimpan secara lokal (di perangkat Anda saja) dan tidak pernah dikirim ke server aplikasi ini.',
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: hasKey ? AppColors.sehat : AppColors.warning,
+                    size: 18,
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Area Gambar
+          // â”€â”€ Area Gambar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (_image != null)
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.file(_image!, height: 250, width: double.infinity, fit: BoxFit.cover),
+              child: Image.file(
+                _image!,
+                height: 250,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ).animate().fade().scale(begin: const Offset(0.95, 0.95))
           else
             Container(
@@ -781,88 +837,126 @@ class _AiTabState extends State<_AiTab> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.divider, style: BorderStyle.solid),
+                border: Border.all(color: AppColors.divider),
               ),
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_a_photo_outlined, size: 48, color: AppColors.textHint),
+                  Icon(Icons.add_a_photo_outlined,
+                      size: 48, color: AppColors.textHint),
                   SizedBox(height: 12),
-                  Text('Belum ada foto yang dipilih', style: TextStyle(color: AppColors.textSecondary)),
+                  Text('Belum ada foto yang dipilih',
+                      style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
             ),
-          
           const SizedBox(height: 20),
 
-          // Tombol Pilih Gambar
+          // â”€â”€ Tombol Kamera / Galeri â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _isLoading ? null : () => _pickImage(ImageSource.camera),
+                  onPressed: _isLoading
+                      ? null
+                      : () => _pickImage(ImageSource.camera),
                   icon: const Icon(Icons.camera_alt),
                   label: const Text('Kamera'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _isLoading ? null : () => _pickImage(ImageSource.gallery),
+                  onPressed: _isLoading
+                      ? null
+                      : () => _pickImage(ImageSource.gallery),
                   icon: const Icon(Icons.photo_library),
                   label: const Text('Galeri'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
             ],
           ),
-
           const SizedBox(height: 24),
 
-          // Tombol Analisis
-          ElevatedButton(
+          // â”€â”€ Tombol Analisis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          FilledButton(
             onPressed: (_image == null || _isLoading) ? null : _analyzeImage,
-            style: ElevatedButton.styleFrom(
+            style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: _isLoading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Analisis Gambar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Text('Analisis Gambar',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
-
           const SizedBox(height: 24),
 
-          // Error Message
+          // â”€â”€ Error â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (_error != null)
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppColors.error.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-              child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+              decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: AppColors.error, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(_error!,
+                        style: const TextStyle(
+                            color: AppColors.error, fontSize: 13)),
+                  ),
+                ],
+              ),
             ).animate().fade(),
 
-          // Hasil
+          // â”€â”€ Hasil Analisis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (_geminiResult != null) ...[
-            const Text('Hasil Analisis Gemini AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Hasil Analisis Gemini AI',
+                style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                border: Border.all(
+                    color: AppColors.primary.withOpacity(0.3)),
+                boxShadow: [
+                  BoxShadow(
+                      color: AppColors.primary.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4))
+                ],
               ),
               child: Text(
                 _geminiResult!,
-                style: const TextStyle(height: 1.6, fontSize: 14, color: AppColors.textPrimary),
+                style: const TextStyle(
+                    height: 1.6,
+                    fontSize: 14,
+                    color: AppColors.textPrimary),
               ),
             ).animate().fade().slideY(begin: 0.1),
           ],
@@ -870,4 +964,39 @@ class _AiTabState extends State<_AiTab> {
       ),
     );
   }
+}
+
+// Widget helper kecil untuk step di dalam dialog
+class _InlineStep extends StatelessWidget {
+  final String n, text;
+  const _InlineStep({required this.n, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: const Color(0xFF4285F4),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Center(
+            child: Text(n,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Text(text,
+                style: const TextStyle(fontSize: 12, height: 1.4))),
+      ],
+    );
+}
+
 }
